@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Studio - Multi Voice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .gradient-bg { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        select { appearance: none; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
+
+    <div class="max-w-2xl w-full glass rounded-[2rem] shadow-2xl p-6 md:p-10 border border-white/30">
+        <header class="text-center mb-8">
+            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-full uppercase tracking-widest">Premium Web TTS</span>
+            <h1 class="text-4xl font-black text-slate-900 tracking-tighter mt-2">Voice Studio</h1>
+            <p class="text-slate-500 text-sm mt-1 font-medium">Ubah teks menjadi suara profesional</p>
+        </header>
+
+        <div class="space-y-5">
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Pilih Karakter Suara</label>
+                <div class="relative">
+                    <select id="voiceSelect" class="w-full p-4 pr-10 rounded-2xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm font-bold text-slate-700 cursor-pointer">
+                        <option value="">Memuat daftar suara...</option>
+                    </select>
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                        ▼
+                    </div>
+                </div>
+                <p class="text-[9px] text-indigo-500 mt-2 italic font-medium">*Daftar suara tergantung pada sistem operasi perangkat Anda (Windows/Android/iOS).</p>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Isi Teks</label>
+                <textarea id="textInput" rows="5" class="w-full p-5 rounded-2xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner text-slate-700 font-medium" placeholder="Tulis atau tempel teks di sini..."></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-2xl">
+                <div>
+                    <div class="flex justify-between">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kecepatan</label>
+                        <span id="rateValue" class="text-[10px] font-bold text-indigo-600">1x</span>
+                    </div>
+                    <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                </div>
+                <div>
+                    <div class="flex justify-between">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nada (Pitch)</label>
+                        <span id="pitchValue" class="text-[10px] font-bold text-indigo-600">1x</span>
+                    </div>
+                    <input type="range" id="pitch" min="0" max="2" value="1" step="0.1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 pt-4">
+                <button onclick="speakText()" class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 active:scale-95 transition-all text-lg tracking-tight">
+                    🔊 PUTAR SEKARANG
+                </button>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="stopText()" class="py-3 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold hover:bg-slate-50 transition uppercase text-[10px]">Stop</button>
+                    <button onclick="downloadVoice()" class="py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 shadow-md transition uppercase text-[10px]">Download MP3</button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-8 text-center opacity-40">
+            <p class="text-[9px] font-bold uppercase tracking-widest text-slate-800">Versi 2.0 | Multi-Language Support</p>
+        </footer>
+    </div>
+
+    <script>
+        const synth = window.speechSynthesis;
+        const voiceSelect = document.getElementById('voiceSelect');
+        const rateInput = document.getElementById('rate');
+        const pitchInput = document.getElementById('pitch');
+        let voices = [];
+
+        // Fungsi Memuat Suara
+        function populateVoices() {
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+            
+            voices.forEach((voice, i) => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                
+                if (voice.default) option.textContent += ' -- DEFAULT';
+
+                option.setAttribute('data-lang', voice.lang);
+                option.setAttribute('data-name', voice.name);
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        populateVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoices;
+        }
+
+        // Update Label Value
+        rateInput.oninput = () => document.getElementById('rateValue').innerText = rateInput.value + 'x';
+        pitchInput.oninput = () => document.getElementById('pitchValue').innerText = pitchInput.value + 'x';
+
+        function speakText() {
+            if (synth.speaking) synth.cancel();
+            const text = document.getElementById('textInput').value;
+            if (!text) return;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+            
+            utterance.voice = voices.find(v => v.name === selectedVoiceName);
+            utterance.rate = rateInput.value;
+            utterance.pitch = pitchInput.value;
+
+            synth.speak(utterance);
+        }
+
+        function stopText() {
+            synth.cancel();
+        }
+
+        function downloadVoice() {
+            const text = document.getElementById('textInput').value;
+            if (!text) return alert("Ketik teks dulu!");
+
+            const selectedOption = voiceSelect.selectedOptions[0];
+            const lang = selectedOption.getAttribute('data-lang').split('-')[0]; // Ambil kode depan (id/en)
+            const speed = rateInput.value;
+            
+            // Menggunakan API Google Translate untuk download (Lebih jernih)
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&total=1&idx=0&textlen=${text.length}&client=tw-ob&ttsspeed=${speed}`;
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.click();
+        }
+    </script>
+</body>
+</html>
